@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Outreach Draft Creator</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe7;
+        --panel: #fffaf2;
+        --panel-strong: #f7e8d1;
+        --text: #1f1a17;
+        --muted: #6d6258;
+        --accent: #2f5d62;
+        --accent-strong: #21464a;
+        --border: rgba(31, 26, 23, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        width: 360px;
+        min-height: 100vh;
+        font-family: Georgia, "Times New Roman", serif;
+        background:
+          radial-gradient(circle at top left, rgba(47, 93, 98, 0.14), transparent 35%),
+          linear-gradient(180deg, #f8f2e8 0%, var(--bg) 100%);
+        color: var(--text);
+      }
+
+      .shell {
+        padding: 16px;
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: rgba(255, 250, 242, 0.92);
+        box-shadow: 0 12px 30px rgba(31, 26, 23, 0.08);
+        overflow: hidden;
+      }
+
+      .hero {
+        padding: 16px;
+        background: linear-gradient(135deg, rgba(47, 93, 98, 0.14), rgba(247, 232, 209, 0.7));
+        border-bottom: 1px solid var(--border);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1.2;
+      }
+
+      .subtitle {
+        margin-top: 6px;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+
+      .content {
+        padding: 14px 16px 16px;
+      }
+
+      .field {
+        margin-bottom: 12px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #fff;
+        color: var(--text);
+        padding: 10px 12px;
+        font: inherit;
+        font-size: 13px;
+        outline: none;
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 84px;
+      }
+
+      input[readonly] {
+        background: #f4efe9;
+        color: #5d544b;
+      }
+
+      input:focus,
+      textarea:focus {
+        border-color: rgba(47, 93, 98, 0.6);
+        box-shadow: 0 0 0 3px rgba(47, 93, 98, 0.12);
+      }
+
+      .actions {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 12px;
+        background: var(--accent);
+        color: white;
+        padding: 11px 14px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--accent-strong);
+      }
+
+      button:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+      }
+
+      .status {
+        min-height: 18px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .status.error {
+        color: #9b342b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="card">
+        <div class="hero">
+          <h1>Outreach Draft Creator</h1>
+          <div class="subtitle">
+            Select a LinkedIn, Indeed, or Instahyre page, then create a Gmail draft with the visible post details.
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="actions">
+            <button id="createDraftBtn">Create Outreach Draft</button>
+            <div id="status" class="status">Open a job post, then click the button.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

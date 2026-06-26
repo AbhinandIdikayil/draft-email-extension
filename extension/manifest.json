@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "Outreach Draft Creator",
+  "version": "1.0.0",
+  "description": "Extracts visible job-post details from the active tab and creates a Gmail draft in your local account.",
+  "permissions": [
+    "activeTab",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://localhost:5000/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.linkedin.com/*",
+        "*://*.indeed.com/*",
+        "*://*.instahyre.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "style.css",
+        "sidebar.html",
+        "inject.js"
+      ],
+      "matches": [
+        "*://*.linkedin.com/*",
+        "*://*.indeed.com/*",
+        "*://*.instahyre.com/*"
+      ]
+    }
+  ]
+}
