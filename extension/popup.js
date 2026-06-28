@@ -1,4 +1,5 @@
 const BACKEND_URL = "http://localhost:5000";
+const RESUME_FILE_ID = "1uJ5nXn-6rb3bAa-spUrP9i3VZW7KN5OY";
 
 function setStatus(message, isError = false) {
   const status = document.getElementById("status");
@@ -78,7 +79,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     try {
       const details = await extractDetailsFromPage();
-      console.log('details',details)
       setStatus("Checking backend...");
 
       await pingBackend();
@@ -89,7 +89,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         platform: details.platform || "",
         postUrl: details.url || "",
         postText: details.pageText || "",
-        driveFileId: "1uJ5nXn-6rb3bAa-spUrP9i3VZW7KN5OY" // Pass your static resume's Google Drive File ID here
+        driveFileId: RESUME_FILE_ID
       };
 
       setStatus("Creating Gmail draft...");
@@ -98,6 +98,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       setStatus(`Draft created in Gmail${result.draftId ? ` (${result.draftId})` : ""}.`);
       alert('success')
     } catch (error) {
+      console.log(error)
       const message = error instanceof Error ? error.message : "Draft creation failed.";
       alert(message)
       setStatus(message, true);

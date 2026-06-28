@@ -91,22 +91,14 @@ router.post("/create-draft", async (req: Request, res: Response) => {
     const postUrl = normalizeWhitespace(req.body.postUrl);
     const postText = normalizeWhitespace(req.body.postText);
     const attachmentSource = normalizeWhitespace(
-      req.body.driveFileId || req.body.driveFileUrl || req.body.attachmentFileId || req.body.attachmentUrl
+      req.body.driveFileId || req.body.driveFileUrl || req.body.attachmentFileId || req.body.attachmentUrl || req.body.resumeUrl
     );
 
     const subject = buildDraftSubject(roleTitle);
     const html = buildDraftHtml({ platform, postUrl, roleTitle, postText });
-    const attachment = attachmentSource
-      ? await fetchDriveAttachment(oauthClient, attachmentSource)
-      : null;
-
+    const attachment = attachmentSource ? await fetchDriveAttachment(oauthClient, attachmentSource) : null;
     const raw = attachment
-      ? buildDraftMessageWithAttachment({
-          to: recipientEmail,
-          subject,
-          html,
-          attachment
-        })
+      ? buildDraftMessageWithAttachment({ to: recipientEmail, subject, html, attachment })
       : buildDraftMessage({ to: recipientEmail, subject, html });
 
     const response = await gmail.users.drafts.create({

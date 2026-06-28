@@ -25,9 +25,13 @@ export function escapeHtml(value: string): string {
 }
 
 export function extractEmails(text: string): string[] {
-  const matches = String(text || "").match(
-    /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g
-  ) || [];
+  const normalized = String(text || "")
+    .normalize("NFKC")
+    .replace(/\u00A0/g, " ")
+    .replace(/\s+/g, " ");
+
+  const matches =
+    normalized.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) || [];
 
   return [...new Set(matches.map((email) => email.trim()))];
 }
@@ -41,9 +45,7 @@ export function toBase64Url(input: string): string {
 }
 
 export function encodeBase64(input: Buffer | string): string {
-  return Buffer.from(input)
-    .toString("base64")
-    .replace(/\r?\n/g, "");
+  return Buffer.from(input).toString("base64").replace(/\r?\n/g, "");
 }
 
 export function loadRefreshToken(): string {
@@ -104,6 +106,22 @@ export function buildDraftMessage({
 
   const rawMessage = `${headers.join("\r\n")}\r\n\r\n${html}`;
   return toBase64Url(rawMessage);
+}
+
+export function compactRoleTitle(value: string): string {
+  let cleaned = normalizeWhitespace(value).replace(/^Associate\s+/i, "");
+  const firstChunk = cleaned.split(/\s*(?:\||•|–|—|-)\s*/)[0] ?? "";
+
+  cleaned = firstChunk
+    .replace(
+      /\s+(?:Location|Company|Experience|Posted|Feed post|Apply|Applicants?|Job|Hiring)\b.*$/i,
+      ""
+    )
+    .replace(/[\u{1F300}-\u{1FAFF}].*$/u, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  return cleaned;
 }
 
 export type DriveAttachment = {
@@ -235,22 +253,27 @@ export function buildDraftHtml({
   postText: string;
 }): string {
   const safePlatform = normalizeWhitespace(platform) || "the post";
-  const safeRole = normalizeWhitespace(roleTitle) || "the role";
+  const safeRole = compactRoleTitle(roleTitle) || "the role";
   const safeText = normalizeWhitespace(postText) || "No page text was captured.";
   const escapedPlatform = escapeHtml(safePlatform);
   const escapedRole = escapeHtml(safeRole);
   const escapedText = escapeHtml(safeText).replace(/\n/g, "<br>");
   const escapedUrl = escapeHtml(postUrl || "#");
+  const linkedinUrl = "https://www.linkedin.com/in/abhinand-i-1a793a2a7/";
+  const githubUrl = "https://github.com/AbhinandIdikayil/";
 
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f1a17;">
       <p>Dear hiring manager,</p>
-      <p>Iam writing this email to express my interest in ${escapedRole} role, that i saw on <a href="${escapedUrl}">${escapedPlatform}</a></p>
-      <p>I am an experienced Full-Stack Developer with hands-on expertise in NestJS NodeJS, React, and Next.js. I have successfully built and deployed monolithic and microservice architectures on Cloud platforms (GCP, Azure, DigitalOcean) using Docker and Kubernetes</p>
-      <p>My expertise lies in databases like Clickhouse, Postgres, MongoDB and implementing WhatsApp automation. With a strong foundation in SOLID principles and a focus on clean code, I am eager to help your development team.</p>
-      <blockquote style="margin: 12px 0; padding: 12px 14px; border-left: 4px solid #2f5d62; background: #f7f3eb;">
-        ${escapedText}
-      </blockquote>
+      <p>I am writing this email to express my interest in ${escapedRole} position, that I saw on <a href="${escapedUrl}">${escapedPlatform}</a>.</p>
+      <p>I am an experienced Full-Stack Developer with hands-on expertise in <strong>NestJS</strong> <strong>NodeJS</strong>, <strong>React</strong>, and <strong>Next.js</strong>. I have successfully built and deployed monolithic and microservice architectures on Cloud platforms (GCP, Azure, DigitalOcean) using <strong>Docker</strong> and <strong>Kubernetes</strong>.</p>
+      <p>My expertise lies in databases like <strong>ClickHouse</strong>, <strong>Postgres</strong>, <strong>MongoDB</strong> and implementing WhatsApp automation. With a strong foundation in <strong>SOLID principles</strong> and a focus on clean code, I am eager to help your development team.</p>
+      <p>Hoping to hear back from you further</p>
+      <p>
+        <a href="${linkedinUrl}">LinkedIn</a>
+        <br>
+        <a href="${githubUrl}">GitHub</a>
+      </p>
     </div>
   `;
 }
@@ -267,11 +290,16 @@ export function bestRecipientEmail(body: {
     ...extractEmails(`${body.postText || ""}\n${body.roleTitle || ""}`)
   ];
 
-  return candidates.map((email) => String(email || "").trim()).find(Boolean) || "";
+  return (
+    candidates
+      .map((email) => String(email || "").trim().normalize("NFKC"))
+      .find((email) => /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) ||
+    ""
+  );
 }
 
 export function buildDraftSubject(roleTitle: string): string {
-  const cleanedRole = normalizeWhitespace(roleTitle).replace(/^Associate\s+/i, "");
+  const cleanedRole = compactRoleTitle(roleTitle);
   const displayRole = cleanedRole ? toTitleCase(cleanedRole) : "Full Stack Developer";
 
   return `Application - ${displayRole} - Abhinand`;
