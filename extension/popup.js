@@ -1,5 +1,5 @@
 const BACKEND_URL = "http://localhost:5000";
-const RESUME_FILE_ID = "1uJ5nXn-6rb3bAa-spUrP9i3VZW7KN5OY";
+const RESUME_FILE_ID = "1QAKCxTWTs0olhfqsYvsfGKKhNkpvDEPQ";
 
 function setStatus(message, isError = false) {
   const status = document.getElementById("status");

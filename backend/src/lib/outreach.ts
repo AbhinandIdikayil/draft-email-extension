@@ -124,6 +124,10 @@ export function compactRoleTitle(value: string): string {
   return cleaned;
 }
 
+export const DEFAULT_RESUME_URL =
+  "https://drive.google.com/file/d/1QAKCxTWTs0olhfqsYvsfGKKhNkpvDEPQ/view?usp=sharing";
+export const DEFAULT_RESUME_FILE_ID = "1QAKCxTWTs0olhfqsYvsfGKKhNkpvDEPQ";
+
 export type DriveAttachment = {
   fileId: string;
   name: string;
@@ -173,19 +177,31 @@ export async function fetchDriveAttachment(
   });
 
   const fileMetadata = metadata.data as { name?: string; mimeType?: string };
-  const name = fileMetadata.name || "attachment";
-  const mimeType = fileMetadata.mimeType || "application/octet-stream";
+  let name = fileMetadata.name || "Resume.pdf";
+  let mimeType = fileMetadata.mimeType || "application/pdf";
+  let data: Buffer;
 
-  const response = await drive.files.get(
-    { fileId, alt: "media" },
-    { responseType: "arraybuffer" }
-  );
+  if (mimeType === "application/vnd.google-apps.document") {
+    const response = await drive.files.export(
+      { fileId, mimeType: "application/pdf" },
+      { responseType: "arraybuffer" }
+    );
+    name = name.toLowerCase().endsWith(".pdf") ? name : `${name}.pdf`;
+    mimeType = "application/pdf";
+    data = Buffer.from(response.data as ArrayBuffer);
+  } else {
+    const response = await drive.files.get(
+      { fileId, alt: "media" },
+      { responseType: "arraybuffer" }
+    );
+    data = Buffer.from(response.data as ArrayBuffer);
+  }
 
   return {
     fileId,
     name,
     mimeType,
-    data: Buffer.from(response.data as ArrayBuffer)
+    data
   };
 }
 
@@ -202,6 +218,10 @@ export function buildDraftMessageWithAttachment({
 }): string {
   const boundary = `boundary_${Date.now().toString(16)}`;
   const attachmentBase64 = encodeBase64(attachment.data);
+  const formattedAttachmentBase64 =
+    attachmentBase64.match(/.{1,76}/g)?.join("\r\n") || attachmentBase64;
+  const safeFilename = (attachment.name || "Resume.pdf").replace(/["\r\n\\]/g, "");
+
   const htmlPart = [
     `--${boundary}`,
     'Content-Type: text/html; charset="UTF-8"',
@@ -212,11 +232,11 @@ export function buildDraftMessageWithAttachment({
   ];
   const attachmentPart = [
     `--${boundary}`,
-    `Content-Type: ${attachment.mimeType}; name="${escapeHtml(attachment.name)}"`,
-    `Content-Disposition: attachment; filename="${escapeHtml(attachment.name)}"`,
+    `Content-Type: ${attachment.mimeType}; name="${safeFilename}"`,
+    `Content-Disposition: attachment; filename="${safeFilename}"`,
     "Content-Transfer-Encoding: base64",
     "",
-    attachmentBase64,
+    formattedAttachmentBase64,
     ""
   ];
 
@@ -241,41 +261,100 @@ export function buildDraftMessageWithAttachment({
   return toBase64Url(rawMessage);
 }
 
-export function buildDraftHtml({
-  platform,
-  postUrl,
-  roleTitle,
-  postText
-}: {
-  platform: string;
-  postUrl: string;
-  roleTitle: string;
-  postText: string;
-}): string {
-  const safePlatform = normalizeWhitespace(platform) || "the post";
-  const safeRole = compactRoleTitle(roleTitle) || "the role";
-  const safeText = normalizeWhitespace(postText) || "No page text was captured.";
-  const escapedPlatform = escapeHtml(safePlatform);
-  const escapedRole = escapeHtml(safeRole);
-  const escapedText = escapeHtml(safeText).replace(/\n/g, "<br>");
-  const escapedUrl = escapeHtml(postUrl || "#");
-  const linkedinUrl = "https://www.linkedin.com/in/abhinand-i-1a793a2a7/";
-  const githubUrl = "https://github.com/AbhinandIdikayil/";
+export const DRAFT_TEMPLATES = ["default", "formal"] as const;
+export type DraftTemplateId = (typeof DRAFT_TEMPLATES)[number];
+
+export function resolveDraftTemplate(value: string): DraftTemplateId {
+  const normalized = normalizeWhitespace(value).toLowerCase();
+  return (DRAFT_TEMPLATES as readonly string[]).includes(normalized)
+    ? (normalized as DraftTemplateId)
+    : "default";
+}
+
+type DraftHtmlContext = {
+  escapedPlatform: string;
+  escapedRole: string;
+  escapedUrl: string;
+  githubUrl: string;
+  resumeUrl: string;
+};
+
+function buildDefaultDraftHtml(ctx: DraftHtmlContext): string {
+  const { escapedPlatform, escapedRole, escapedUrl, githubUrl, resumeUrl } = ctx;
+
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f1a17;">
+      <p>Dear hiring manager,</p>
+      <p>Writing this email to express my interest in ${escapedRole} position, that I saw on <a href="${escapedUrl}">${escapedPlatform}</a>.</p>
+      <p> I'm Abhinand, Full stack developer for the last year. I built the backend and frontend for some features that actually mattered: </p>
+      <ul>
+        <li>
+        Rebuilt how we handled video streaming in the product catalog. Pages went from 10s load to 3s. Store owners saw the difference immediately.
+        </li>
+        <li>
+        Built a WhatsApp automation system that eliminated the back-and-forth on routine stuff—feedback collection, order updates etc.
+        </li>
+        <li>
+        Built an internal admin dashboard to automate store management, approvals and operational workflows.
+        </li>
+      </ul>
+      <p> I'm looking to move somewhere I can keep doing this kind of work. Full-stack, backend etc. </p>
+      <p>Hoping to hear back from you further</p>
+      <p>
+        <a href="${githubUrl}">GitHub</a>
+        |
+        <a href="${resumeUrl}">Resume</a>
+      </p>
+    </div>
+  `;
+}
+
+function buildFormalDraftHtml(ctx: DraftHtmlContext): string {
+  const { escapedPlatform, escapedRole, escapedUrl, githubUrl } = ctx;
 
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f1a17;">
       <p>Dear hiring manager,</p>
       <p>I am writing this email to express my interest in ${escapedRole} position, that I saw on <a href="${escapedUrl}">${escapedPlatform}</a>.</p>
-      <p>I am an experienced Full-Stack Developer with hands-on expertise in <strong>NestJS</strong> <strong>NodeJS</strong>, <strong>React</strong>, and <strong>Next.js</strong>. I have successfully built and deployed monolithic and microservice architectures on Cloud platforms (GCP, Azure, DigitalOcean) using <strong>Docker</strong> and <strong>Kubernetes</strong>.</p>
-      <p>My expertise lies in databases like <strong>ClickHouse</strong>, <strong>Postgres</strong>, <strong>MongoDB</strong> and implementing WhatsApp automation. With a strong foundation in <strong>SOLID principles</strong> and a focus on clean code, I am eager to help your development team.</p>
+      <p>I am a Full-Stack Developer with over 1+ YOE and hands-on expertise in NestJS, NodeJS, React, and Next.js. I have successfully built and deployed monolithic and microservice architectures on Cloud platforms (GCP, Azure, DigitalOcean) using Docker and Kubernetes.</p>
+      <p>My expertise lies in databases like ClickHouse, Postgres, MongoDB and implementing WhatsApp automation. With a strong foundation in SOLID principles and a focus on clean code, I am eager to help your development team.</p>
       <p>Hoping to hear back from you further</p>
       <p>
-        <a href="${linkedinUrl}">LinkedIn</a>
-        <br>
         <a href="${githubUrl}">GitHub</a>
       </p>
     </div>
   `;
+}
+
+export function buildDraftHtml({
+  platform,
+  postUrl,
+  roleTitle,
+  template
+}: {
+  platform: string;
+  postUrl: string;
+  roleTitle: string;
+  postText?: string;
+  template?: string;
+}): string {
+  const safePlatform = normalizeWhitespace(platform) || "the post";
+  const safeRole = compactRoleTitle(roleTitle) || "Full Stack Developer";
+  const escapedPlatform = escapeHtml(safePlatform);
+  const escapedRole = escapeHtml(safeRole);
+  const escapedUrl = escapeHtml(postUrl || "#");
+
+  const ctx: DraftHtmlContext = {
+    escapedPlatform,
+    escapedRole,
+    escapedUrl,
+    githubUrl: "https://github.com/AbhinandIdikayil/",
+    resumeUrl: DEFAULT_RESUME_URL
+  };
+
+  return resolveDraftTemplate(template || "") === "formal"
+    ? buildFormalDraftHtml(ctx)
+    : buildDefaultDraftHtml(ctx);
 }
 
 export function bestRecipientEmail(body: {

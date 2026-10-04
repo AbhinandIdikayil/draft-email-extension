@@ -10,7 +10,8 @@ import {
   getOAuthClient,
   loadRefreshToken,
   normalizeWhitespace,
-  saveRefreshToken
+  saveRefreshToken,
+  DEFAULT_RESUME_FILE_ID
 } from "../lib/outreach.js";
 
 const router = Router();
@@ -90,12 +91,19 @@ router.post("/create-draft", async (req: Request, res: Response) => {
     const platform = normalizeWhitespace(req.body.platform);
     const postUrl = normalizeWhitespace(req.body.postUrl);
     const postText = normalizeWhitespace(req.body.postText);
+    const template = normalizeWhitespace(req.body.template);
     const attachmentSource = normalizeWhitespace(
-      req.body.driveFileId || req.body.driveFileUrl || req.body.attachmentFileId || req.body.attachmentUrl || req.body.resumeUrl
+      req.body.driveFileId ||
+        req.body.driveFileUrl ||
+        req.body.attachmentFileId ||
+        req.body.attachmentUrl ||
+        req.body.resumeUrl ||
+        process.env.RESUME_DRIVE_FILE_ID ||
+        DEFAULT_RESUME_FILE_ID
     );
 
     const subject = buildDraftSubject(roleTitle);
-    const html = buildDraftHtml({ platform, postUrl, roleTitle, postText });
+    const html = buildDraftHtml({ platform, postUrl, roleTitle, postText, template:'formal' });
     const attachment = attachmentSource ? await fetchDriveAttachment(oauthClient, attachmentSource) : null;
     const raw = attachment
       ? buildDraftMessageWithAttachment({ to: recipientEmail, subject, html, attachment })
